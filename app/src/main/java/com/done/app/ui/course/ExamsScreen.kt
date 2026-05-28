@@ -1,5 +1,7 @@
-package com.done.app.ui.home
+package com.done.app.ui.course
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,41 +36,36 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
-import com.done.app.data.model.Course
+import com.done.app.data.model.Exam
+import java.time.LocalDate
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(navController: NavController) {
-    var newCourseName by remember {
+    fun ExamScreen(
+        courseName: String
+    ) {
+    var newExamName by remember {
         mutableStateOf("")
     }
     var nextId by remember {
-        mutableIntStateOf(4)
+        mutableIntStateOf(0)
     }
-    var showAddCourseDialog by remember {
+    var showAddExamDialog by remember {
         mutableStateOf(false)
     }
-    val newCourseNameTrimmed = newCourseName.trim()
+    var newDeadline by remember {
+        mutableStateOf("")
+    }
+    val exams = remember {
+        mutableStateListOf<Exam>()
+    }
+    val newExamNameTrimmed = newExamName.trim()
 
-    val courses = remember {
-        mutableStateListOf(
-            Course(
-                id = 1,
-                name = "Mobile Development",
-                progress = 80
-            ),
-            Course(
-                id = 2,
-                name = "Cloud Computing",
-                progress = 20
-            ),
-            Course(
-                id = 3,
-                name = "Web Engineering",
-                progress = 50
-            )
-        )
+    val deadlineDate = try {
+        LocalDate.parse(newDeadline)
+    } catch (e: Exception) {
+        null
     }
 
     Scaffold(
@@ -78,7 +75,7 @@ fun HomeScreen(navController: NavController) {
             ) {
                 TopAppBar(
                     title = {
-                        Text("Done")
+                        Text(courseName)
                     }
                 )
 
@@ -91,51 +88,68 @@ fun HomeScreen(navController: NavController) {
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
-                    showAddCourseDialog = true
+                    showAddExamDialog = true
                 }
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = "Add course"
+                    contentDescription = "Add exam"
                 )
             }
         }
     ) { paddingValues ->
-        if (showAddCourseDialog) {
+        if (showAddExamDialog) {
             AlertDialog(
                 onDismissRequest = {
-                    showAddCourseDialog = false
+                    showAddExamDialog = false
                 },
                 title = {
-                    Text("Add Course")
+                    Text("Add Exam")
                 },
                 text = {
-                    OutlinedTextField(
-                        value = newCourseName,
-                        onValueChange = {
-                            newCourseName = it
-                        },
-                        label = {
-                            Text("Course Name")
-                        }
-                    )
+                    Column {
+                        OutlinedTextField(
+                            value = newExamName,
+                            onValueChange = {
+                                newExamName = it
+                            },
+                            label = {
+                                Text("Exam Name")
+                            }
+                        )
+
+                        OutlinedTextField(
+                            value = newDeadline,
+                            onValueChange = {
+                                newDeadline = it
+                            },
+                            label = {
+                                Text("Date (YYYY-MM-DD)")
+                            }
+                        )
+                    }
                 },
                 confirmButton = {
                     TextButton(
-                        enabled = newCourseNameTrimmed.isNotEmpty(),
+                        enabled = newExamNameTrimmed.isNotEmpty(),
                         onClick = {
-                            if (newCourseNameTrimmed.isNotEmpty()) {
-                                courses.add(
-                                    Course(
+                            if (newExamNameTrimmed.isNotEmpty()
+                                && deadlineDate != null
+                            ) {
+                                exams.add(
+                                    Exam(
                                         id = nextId,
-                                        name = newCourseNameTrimmed,
-                                        progress = 0
+                                        courseId = 1,
+                                        title = newExamNameTrimmed,
+                                        date = deadlineDate,
+                                        isDone = false
                                     )
                                 )
 
                                 nextId++
-                                newCourseName = ""
-                                showAddCourseDialog = false
+                                newExamName = ""
+                                newDeadline = ""
+                                showAddExamDialog = false
                             }
                         }
                     ) {
@@ -145,7 +159,7 @@ fun HomeScreen(navController: NavController) {
                 dismissButton = {
                     TextButton(
                         onClick = {
-                            showAddCourseDialog = false
+                            showAddExamDialog = false
                         }
                     ) {
                         Text("Cancel")
@@ -153,42 +167,41 @@ fun HomeScreen(navController: NavController) {
                 }
             )
         }
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFFF7F7FC))
                 .padding(paddingValues)
         ) {
-            if (courses.isEmpty()) {
+            if (exams.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No courses yet",
+                        text = "No exams yet",
                         style = MaterialTheme.typography.bodyLarge,
                         color = Color(0xFF6D6A7A)
                     )
                 }
             } else {
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
+                    columns = GridCells.Fixed(1),
                     contentPadding = PaddingValues(8.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    items(courses) { course ->
-                        CourseCard(
-                            course = course,
+                    items(exams) { exam ->
+                        ExamsCard(
+                            exam = exam,
                             onDeleteClick = {
-                                courses.remove(course)
+                                exams.remove(exam)
                             },
-                            onClick = {
-                                navController.navigate(
-                                    "course/${course.name}"
+                            onCheckedChange = { isChecked ->
+                                val index = exams.indexOf(exam)
+                                exams[index] = exam.copy(
+                                    isDone = isChecked
                                 )
-
                             }
                         )
                     }

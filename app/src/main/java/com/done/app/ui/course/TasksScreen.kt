@@ -1,5 +1,7 @@
-package com.done.app.ui.home
+package com.done.app.ui.course
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,43 +36,58 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
-import com.done.app.data.model.Course
+import com.done.app.data.model.Task
+import java.time.LocalDate
+
 
 @OptIn(ExperimentalMaterial3Api::class)
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun HomeScreen(navController: NavController) {
-    var newCourseName by remember {
+fun TasksScreen(
+    courseName: String
+) {
+    var newTaskName by remember {
         mutableStateOf("")
     }
     var nextId by remember {
         mutableIntStateOf(4)
     }
-    var showAddCourseDialog by remember {
+    var showAddTaskDialog by remember {
         mutableStateOf(false)
     }
-    val newCourseNameTrimmed = newCourseName.trim()
+    var newDeadline by remember {
+        mutableStateOf("")
+    }
+    val newTaskNameTrimmed = newTaskName.trim()
 
-    val courses = remember {
+    val deadlineDate = try {
+        LocalDate.parse(newDeadline)
+    } catch (e: Exception) {
+        null
+    }
+
+    val tasks = remember {
         mutableStateListOf(
-            Course(
+            Task(
                 id = 1,
-                name = "Mobile Development",
-                progress = 80
+                courseId = 1,
+                name = "Java Basics",
+                deadline = LocalDate.now()
             ),
-            Course(
+            Task(
                 id = 2,
-                name = "Cloud Computing",
-                progress = 20
+                courseId = 1,
+                name = "Compose Layouts",
+                deadline = LocalDate.now()
             ),
-            Course(
+            Task(
                 id = 3,
-                name = "Web Engineering",
-                progress = 50
+                courseId = 1,
+                name = "Navigation",
+                deadline = LocalDate.now()
             )
         )
     }
-
     Scaffold(
         topBar = {
             Column(
@@ -78,7 +95,7 @@ fun HomeScreen(navController: NavController) {
             ) {
                 TopAppBar(
                     title = {
-                        Text("Done")
+                        Text(courseName)
                     }
                 )
 
@@ -91,51 +108,65 @@ fun HomeScreen(navController: NavController) {
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
-                    showAddCourseDialog = true
+                    showAddTaskDialog = true
                 }
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = "Add course"
+                    contentDescription = "Add task"
                 )
             }
         }
     ) { paddingValues ->
-        if (showAddCourseDialog) {
+        if (showAddTaskDialog) {
             AlertDialog(
                 onDismissRequest = {
-                    showAddCourseDialog = false
+                    showAddTaskDialog = false
                 },
                 title = {
-                    Text("Add Course")
+                    Text("Add Task")
                 },
                 text = {
-                    OutlinedTextField(
-                        value = newCourseName,
-                        onValueChange = {
-                            newCourseName = it
-                        },
-                        label = {
-                            Text("Course Name")
-                        }
-                    )
+                    Column {
+                        OutlinedTextField(
+                            value = newTaskName,
+                            onValueChange = {
+                                newTaskName = it
+                            },
+                            label = {
+                                Text("Task Name")
+                            }
+                        )
+
+                        OutlinedTextField(
+                            value = newDeadline,
+                            onValueChange = {
+                                newDeadline = it
+                            },
+                            label = {
+                                Text("Deadline (YYYY-MM-DD)")
+                            }
+                        )
+                    }
                 },
                 confirmButton = {
                     TextButton(
-                        enabled = newCourseNameTrimmed.isNotEmpty(),
+                        enabled = newTaskNameTrimmed.isNotEmpty(),
                         onClick = {
-                            if (newCourseNameTrimmed.isNotEmpty()) {
-                                courses.add(
-                                    Course(
+                            if (newTaskNameTrimmed.isNotEmpty()
+                                && deadlineDate != null) {
+                                tasks.add(
+                                    Task(
                                         id = nextId,
-                                        name = newCourseNameTrimmed,
-                                        progress = 0
+                                        courseId = 1,
+                                        name = newTaskNameTrimmed,
+                                        deadline = deadlineDate
                                     )
                                 )
 
                                 nextId++
-                                newCourseName = ""
-                                showAddCourseDialog = false
+                                newTaskName = ""
+                                showAddTaskDialog = false
                             }
                         }
                     ) {
@@ -145,7 +176,7 @@ fun HomeScreen(navController: NavController) {
                 dismissButton = {
                     TextButton(
                         onClick = {
-                            showAddCourseDialog = false
+                            showAddTaskDialog = false
                         }
                     ) {
                         Text("Cancel")
@@ -153,44 +184,44 @@ fun HomeScreen(navController: NavController) {
                 }
             )
         }
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFFF7F7FC))
                 .padding(paddingValues)
         ) {
-            if (courses.isEmpty()) {
+            if (tasks.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No courses yet",
+                        text = "No tasks yet",
                         style = MaterialTheme.typography.bodyLarge,
                         color = Color(0xFF6D6A7A)
                     )
                 }
             } else {
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
+                    columns = GridCells.Fixed(1),
                     contentPadding = PaddingValues(8.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    items(courses) { course ->
-                        CourseCard(
-                            course = course,
+                    items(tasks) { task ->
+                        TaskCard(
+                            task = task,
                             onDeleteClick = {
-                                courses.remove(course)
+                                tasks.remove(task)
                             },
-                            onClick = {
-                                navController.navigate(
-                                    "course/${course.name}"
+                            onCheckedChange = { isChecked ->
+                                val index = tasks.indexOf(task)
+                                tasks[index] = task.copy(
+                                    isDone = isChecked
                                 )
-
                             }
                         )
+
                     }
                 }
             }
