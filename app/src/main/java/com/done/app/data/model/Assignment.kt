@@ -7,5 +7,6 @@ data  class Assignment (
         val courseId: Int,
         val title: String,
         val date: LocalDate,
-        val note: Double
+        val isDone: Boolean = false,
+        val note: Double? = null
 )

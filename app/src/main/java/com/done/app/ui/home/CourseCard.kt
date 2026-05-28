@@ -28,6 +28,8 @@ import com.done.app.data.model.Course
 @Composable
 fun CourseCard(
     course: Course,
+    progress: Int,
+    averageGrade: Double?,
     onDeleteClick: () -> Unit,
     onClick: () -> Unit
 ) {
@@ -46,7 +48,7 @@ fun CourseCard(
         onClick = onClick,
         modifier = Modifier
             .padding(8.dp)
-            .height(130.dp),
+            .height(140.dp),
         shape = RoundedCornerShape(8.dp),
         elevation = CardDefaults.cardElevation(
             defaultElevation = 6.dp
@@ -81,14 +83,20 @@ fun CourseCard(
                     )
                 }
             }
-
             Text(
-                text = "$status - ${course.progress}%"
+                text =
+                    if (averageGrade == null)
+                        "Grade: -"
+                    else
+                        "Grade: %.2f".format(averageGrade)
+            )
+            Text(
+                text = "$status - ${progress}%"
             )
 
             LinearProgressIndicator(
                 progress = {
-                    (course.progress / 100f).coerceIn(0f, 1f)
+                    (progress / 100f).coerceIn(0f, 1f)
                 },
                 modifier = Modifier
                     .padding(top = 8.dp)

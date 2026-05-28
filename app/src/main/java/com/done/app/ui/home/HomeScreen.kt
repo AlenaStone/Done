@@ -36,6 +36,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.done.app.data.model.Course
+import com.done.app.data.repository.AppRepository
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,6 +51,10 @@ fun HomeScreen(navController: NavController) {
         mutableStateOf(false)
     }
     val newCourseNameTrimmed = newCourseName.trim()
+
+    val tasks = AppRepository.tasks
+    val assignments = AppRepository.assignments
+    val exams = AppRepository.exams
 
     val courses = remember {
         mutableStateListOf(
@@ -179,8 +184,50 @@ fun HomeScreen(navController: NavController) {
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     items(courses) { course ->
+                        val courseTasks =
+                            tasks.filter {
+                                it.courseId == course.id
+                            }
+
+                        val courseAssignments =
+                            assignments.filter {
+                                it.courseId == course.id
+                            }
+
+                        val courseExams =
+                            exams.filter {
+                                it.courseId == course.id
+                            }
+
+                        val totalItems =
+                            courseTasks.size +
+                                    courseAssignments.size +
+                                    courseExams.size
+
+                        val completedItems =
+                            courseTasks.count { it.isDone } +
+                                    courseAssignments.count { it.isDone } +
+                                    courseExams.count { it.isDone }
+
+                        val progress =
+                            if (totalItems == 0)
+                                0
+                            else
+                                completedItems * 100 / totalItems
+
+                        val grades =
+                            courseAssignments.mapNotNull { it.note } +
+                                    courseExams.mapNotNull { it.note }
+
+                        val averageGrade =
+                            if (grades.isEmpty())
+                                null
+                            else
+                                grades.average()
                         CourseCard(
                             course = course,
+                            progress = progress,
+                            averageGrade = averageGrade,
                             onDeleteClick = {
                                 courses.remove(course)
                             },

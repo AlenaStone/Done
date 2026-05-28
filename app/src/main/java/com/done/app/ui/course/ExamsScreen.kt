@@ -37,6 +37,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.done.app.data.model.Exam
+import com.done.app.data.repository.AppRepository
+import com.done.app.data.repository.AppRepository.courses
 import java.time.LocalDate
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -57,9 +59,7 @@ import java.time.LocalDate
     var newDeadline by remember {
         mutableStateOf("")
     }
-    val exams = remember {
-        mutableStateListOf<Exam>()
-    }
+    val exams = AppRepository.exams
     val newExamNameTrimmed = newExamName.trim()
 
     val deadlineDate = try {
@@ -68,6 +68,25 @@ import java.time.LocalDate
         null
     }
 
+    var showGradeDialog by remember {
+        mutableStateOf(false)
+    }
+
+    var selectedExam by remember {
+        mutableStateOf<Exam?>(null)
+    }
+
+    var gradeText by remember {
+        mutableStateOf("")
+    }
+
+    val course =  courses.find {
+            it.name == courseName
+        }  ?: return
+    val courseExams =
+        exams.filter {
+            it.courseId == course.id
+        }
     Scaffold(
         topBar = {
             Column(
@@ -139,7 +158,7 @@ import java.time.LocalDate
                                 exams.add(
                                     Exam(
                                         id = nextId,
-                                        courseId = 1,
+                                        courseId = course?.id ?: 0,
                                         title = newExamNameTrimmed,
                                         date = deadlineDate,
                                         isDone = false
@@ -160,6 +179,72 @@ import java.time.LocalDate
                     TextButton(
                         onClick = {
                             showAddExamDialog = false
+                        }
+                    ) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+        if (showGradeDialog) {
+
+            AlertDialog(
+                onDismissRequest = {
+                    showGradeDialog = false
+                },
+
+                title = {
+                    Text("Add Grade")
+                },
+
+                text = {
+
+                    OutlinedTextField(
+                        value = gradeText,
+                        onValueChange = {
+                            gradeText = it
+                        },
+                        label = {
+                            Text("Grade")
+                        }
+                    )
+                },
+
+                confirmButton = {
+
+                    TextButton(
+                        onClick = {
+
+                            val grade =
+                                gradeText.toDoubleOrNull()
+
+                            if (
+                                grade != null &&
+                                selectedExam != null
+                            ) {
+
+                                val index =
+                                    exams.indexOf(selectedExam)
+
+                                exams[index] =
+                                    selectedExam!!.copy(
+                                        note = grade
+                                    )
+
+                                showGradeDialog = false
+                                gradeText = ""
+                            }
+                        }
+                    ) {
+                        Text("Save")
+                    }
+                },
+
+                dismissButton = {
+
+                    TextButton(
+                        onClick = {
+                            showGradeDialog = false
                         }
                     ) {
                         Text("Cancel")
@@ -191,18 +276,23 @@ import java.time.LocalDate
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    items(exams) { exam ->
+                    items(courseExams) { exam ->
                         ExamsCard(
                             exam = exam,
+                            onAddGradeClick = {
+                                selectedExam = exam
+                                gradeText = exam.note?.toString() ?: ""
+                                showGradeDialog = true
+                            },
                             onDeleteClick = {
                                 exams.remove(exam)
                             },
-                            onCheckedChange = { isChecked ->
-                                val index = exams.indexOf(exam)
-                                exams[index] = exam.copy(
-                                    isDone = isChecked
-                                )
-                            }
+                            onCheckedChange =  { isChecked ->
+                            val index = exams.indexOf(exam)
+                            exams[index] = exam.copy(
+                                isDone = isChecked
+                            )
+                        }
                         )
                     }
                 }

@@ -24,18 +24,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.done.app.data.model.Exam
+import com.done.app.data.model.Assignment
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun ExamsCard(
-    exam: Exam,
+fun AssignmentCard(
+    assignment: Assignment,
     onDeleteClick: () -> Unit,
     onCheckedChange: (Boolean) -> Unit,
     onAddGradeClick: () -> Unit
+
 ) {
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { dismissValue ->
@@ -51,11 +52,11 @@ fun ExamsCard(
     val daysLeft =
         ChronoUnit.DAYS.between(
             LocalDate.now(),
-            exam.date
+            assignment.date
         )
     val cardColor = when {
 
-        exam.isDone ->
+        assignment.isDone ->
             Color(0xFF6BA473)
 
         daysLeft < 0 ->
@@ -102,17 +103,17 @@ fun ExamsCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Checkbox(
-                    checked = exam.isDone,
+                    checked = assignment.isDone,
                     onCheckedChange = onCheckedChange
                 )
                 Text(
-                    text = exam.title,
+                    text = assignment.title,
                     modifier = Modifier.weight(1f),
 
                     )
 
                 Text(
-                    text = exam.date.toString(),
+                    text = assignment.date.toString(),
                     modifier = Modifier.padding(horizontal = 8.dp)
                 )
 
@@ -122,14 +123,14 @@ fun ExamsCard(
                     }
                 ) {
                     Text(
-                        if (exam.note == null)
+                        if (assignment.note == null)
                             "Add Grade"
                         else
-                            "Grade: ${exam.note}"
+                            "Grade: ${assignment.note}"
                     )
-                }
             }
         }
     }
+}
 }
 

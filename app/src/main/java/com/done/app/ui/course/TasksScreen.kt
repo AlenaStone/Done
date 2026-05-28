@@ -36,7 +36,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.done.app.data.model.Exam
 import com.done.app.data.model.Task
+import com.done.app.data.repository.AppRepository
+import com.done.app.data.repository.AppRepository.courses
 import java.time.LocalDate
 
 
@@ -66,28 +69,16 @@ fun TasksScreen(
         null
     }
 
-    val tasks = remember {
-        mutableStateListOf(
-            Task(
-                id = 1,
-                courseId = 1,
-                name = "Java Basics",
-                deadline = LocalDate.now()
-            ),
-            Task(
-                id = 2,
-                courseId = 1,
-                name = "Compose Layouts",
-                deadline = LocalDate.now()
-            ),
-            Task(
-                id = 3,
-                courseId = 1,
-                name = "Navigation",
-                deadline = LocalDate.now()
-            )
-        )
-    }
+
+    val tasks = AppRepository.tasks
+
+    val course =  courses.find {
+        it.name == courseName
+    }  ?: return
+    val courseTasks =
+        tasks.filter {
+            it.courseId == course.id
+        }
     Scaffold(
         topBar = {
             Column(
@@ -158,7 +149,7 @@ fun TasksScreen(
                                 tasks.add(
                                     Task(
                                         id = nextId,
-                                        courseId = 1,
+                                        courseId = course?.id ?: 0,
                                         name = newTaskNameTrimmed,
                                         deadline = deadlineDate
                                     )
@@ -208,7 +199,7 @@ fun TasksScreen(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    items(tasks) { task ->
+                    items(courseTasks) { task ->
                         TaskCard(
                             task = task,
                             onDeleteClick = {
