@@ -4,7 +4,6 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,39 +18,33 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.done.app.data.model.Exam
-import com.done.app.data.repository.AppRepository
-import com.done.app.data.repository.AppRepository.courses
+import com.done.app.ui.common.EmptyState
+import com.done.app.viewmodel.ExamViewModel
 import java.time.LocalDate
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-    fun ExamScreen(
-        courseName: String
-    ) {
+fun ExamScreen(
+    viewModel: ExamViewModel
+) {
     var newExamName by remember {
         mutableStateOf("")
-    }
-    var nextId by remember {
-        mutableIntStateOf(0)
     }
     var showAddExamDialog by remember {
         mutableStateOf(false)
@@ -59,7 +52,6 @@ import java.time.LocalDate
     var newDeadline by remember {
         mutableStateOf("")
     }
-    val exams = AppRepository.exams
     val newExamNameTrimmed = newExamName.trim()
 
     val deadlineDate = try {
@@ -80,13 +72,8 @@ import java.time.LocalDate
         mutableStateOf("")
     }
 
-    val course =  courses.find {
-            it.name == courseName
-        }  ?: return
-    val courseExams =
-        exams.filter {
-            it.courseId == course.id
-        }
+    val exams by viewModel.exams.collectAsState()
+
     Scaffold(
         topBar = {
             Column(
@@ -94,7 +81,7 @@ import java.time.LocalDate
             ) {
                 TopAppBar(
                     title = {
-                        Text(courseName)
+                        Text("Exams")
                     }
                 )
 
@@ -150,22 +137,16 @@ import java.time.LocalDate
                 },
                 confirmButton = {
                     TextButton(
-                        enabled = newExamNameTrimmed.isNotEmpty(),
+                        enabled = newExamNameTrimmed.isNotEmpty() && deadlineDate != null,
                         onClick = {
                             if (newExamNameTrimmed.isNotEmpty()
                                 && deadlineDate != null
                             ) {
-                                exams.add(
-                                    Exam(
-                                        id = nextId,
-                                        courseId = course?.id ?: 0,
-                                        title = newExamNameTrimmed,
-                                        date = deadlineDate,
-                                        isDone = false
-                                    )
+                                viewModel.addExam(
+                                    examName = newExamNameTrimmed,
+                                    date = deadlineDate
                                 )
 
-                                nextId++
                                 newExamName = ""
                                 newDeadline = ""
                                 showAddExamDialog = false
@@ -223,13 +204,13 @@ import java.time.LocalDate
                                 selectedExam != null
                             ) {
 
-                                val index =
-                                    exams.indexOf(selectedExam)
-
-                                exams[index] =
-                                    selectedExam!!.copy(
-                                        note = grade
+                                selectedExam?.let { exam ->
+                                    viewModel.updateExam(
+                                        exam.copy(
+                                            note = grade
+                                        )
                                     )
+                                }
 
                                 showGradeDialog = false
                                 gradeText = ""
@@ -259,16 +240,9 @@ import java.time.LocalDate
                 .padding(paddingValues)
         ) {
             if (exams.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "No exams yet",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color(0xFF6D6A7A)
-                    )
-                }
+                EmptyState(
+                    text = "No exams yet. Tap + to add one."
+                )
             } else {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(1),
@@ -276,7 +250,7 @@ import java.time.LocalDate
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    items(courseExams) { exam ->
+                    items(exams) { exam ->
                         ExamsCard(
                             exam = exam,
                             onAddGradeClick = {
@@ -285,14 +259,15 @@ import java.time.LocalDate
                                 showGradeDialog = true
                             },
                             onDeleteClick = {
-                                exams.remove(exam)
+                                viewModel.deleteExam(exam)
                             },
                             onCheckedChange =  { isChecked ->
-                            val index = exams.indexOf(exam)
-                            exams[index] = exam.copy(
-                                isDone = isChecked
-                            )
-                        }
+                                viewModel.updateExam(
+                                    exam.copy(
+                                        isDone = isChecked
+                                    )
+                                )
+                            }
                         )
                     }
                 }

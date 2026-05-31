@@ -2,7 +2,6 @@ package com.done.app.ui.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,64 +16,45 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.done.app.data.model.Assignment
 import com.done.app.data.model.Course
-import com.done.app.data.repository.AppRepository
+import com.done.app.data.model.Exam
+import com.done.app.data.model.Task
+import com.done.app.ui.common.EmptyState
+import com.done.app.viewmodel.CourseViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(navController: NavController) {
+fun HomeScreen(
+    navController: NavController,
+    viewModel: CourseViewModel
+) {
     var newCourseName by remember {
         mutableStateOf("")
-    }
-    var nextId by remember {
-        mutableIntStateOf(4)
     }
     var showAddCourseDialog by remember {
         mutableStateOf(false)
     }
     val newCourseNameTrimmed = newCourseName.trim()
-
-    val tasks = AppRepository.tasks
-    val assignments = AppRepository.assignments
-    val exams = AppRepository.exams
-
-    val courses = remember {
-        mutableStateListOf(
-            Course(
-                id = 1,
-                name = "Mobile Development",
-                progress = 80
-            ),
-            Course(
-                id = 2,
-                name = "Cloud Computing",
-                progress = 20
-            ),
-            Course(
-                id = 3,
-                name = "Web Engineering",
-                progress = 50
-            )
-        )
-    }
+    val courses by viewModel.courses.collectAsState()
+    val tasks by viewModel.tasks.collectAsState()
+    val assignments by viewModel.assignments.collectAsState()
+    val exams by viewModel.exams.collectAsState()
 
     Scaffold(
         topBar = {
@@ -130,15 +110,10 @@ fun HomeScreen(navController: NavController) {
                         enabled = newCourseNameTrimmed.isNotEmpty(),
                         onClick = {
                             if (newCourseNameTrimmed.isNotEmpty()) {
-                                courses.add(
-                                    Course(
-                                        id = nextId,
-                                        name = newCourseNameTrimmed,
-                                        progress = 0
-                                    )
+                                viewModel.addCourse(
+                                    newCourseNameTrimmed
                                 )
 
-                                nextId++
                                 newCourseName = ""
                                 showAddCourseDialog = false
                             }
@@ -163,19 +138,12 @@ fun HomeScreen(navController: NavController) {
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFFF7F7FC))
-                .padding(paddingValues)
+            .padding(paddingValues)
         ) {
             if (courses.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "No courses yet",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color(0xFF6D6A7A)
-                    )
-                }
+                EmptyState(
+                    text = "No courses yet. Tap + to add one."
+                )
             } else {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
@@ -184,58 +152,23 @@ fun HomeScreen(navController: NavController) {
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     items(courses) { course ->
-                        val courseTasks =
-                            tasks.filter {
-                                it.courseId == course.id
-                            }
+                        val summary = course.summary(
+                            tasks = tasks,
+                            assignments = assignments,
+                            exams = exams
+                        )
 
-                        val courseAssignments =
-                            assignments.filter {
-                                it.courseId == course.id
-                            }
-
-                        val courseExams =
-                            exams.filter {
-                                it.courseId == course.id
-                            }
-
-                        val totalItems =
-                            courseTasks.size +
-                                    courseAssignments.size +
-                                    courseExams.size
-
-                        val completedItems =
-                            courseTasks.count { it.isDone } +
-                                    courseAssignments.count { it.isDone } +
-                                    courseExams.count { it.isDone }
-
-                        val progress =
-                            if (totalItems == 0)
-                                0
-                            else
-                                completedItems * 100 / totalItems
-
-                        val grades =
-                            courseAssignments.mapNotNull { it.note } +
-                                    courseExams.mapNotNull { it.note }
-
-                        val averageGrade =
-                            if (grades.isEmpty())
-                                null
-                            else
-                                grades.average()
                         CourseCard(
                             course = course,
-                            progress = progress,
-                            averageGrade = averageGrade,
+                            progress = summary.progress,
+                            averageGrade = summary.averageGrade,
                             onDeleteClick = {
-                                courses.remove(course)
+                                viewModel.deleteCourse(course)
                             },
                             onClick = {
                                 navController.navigate(
-                                    "course/${course.name}"
+                                    "course/${course.id}"
                                 )
-
                             }
                         )
                     }
@@ -243,4 +176,38 @@ fun HomeScreen(navController: NavController) {
             }
         }
     }
+}
+
+private data class CourseSummary(
+    val progress: Int,
+    val averageGrade: Double?
+)
+
+private fun Course.summary(
+    tasks: List<Task>,
+    assignments: List<Assignment>,
+    exams: List<Exam>
+): CourseSummary {
+    val courseTasks = tasks.filter { it.courseId == id }
+    val courseAssignments = assignments.filter { it.courseId == id }
+    val courseExams = exams.filter { it.courseId == id }
+
+    val totalItems =
+        courseTasks.size +
+                courseAssignments.size +
+                courseExams.size
+
+    val completedItems =
+        courseTasks.count { it.isDone } +
+                courseAssignments.count { it.isDone } +
+                courseExams.count { it.isDone }
+
+    val grades =
+        courseAssignments.mapNotNull { it.note } +
+                courseExams.mapNotNull { it.note }
+
+    return CourseSummary(
+        progress = if (totalItems == 0) 0 else completedItems * 100 / totalItems,
+        averageGrade = grades.takeIf { it.isNotEmpty() }?.average()
+    )
 }

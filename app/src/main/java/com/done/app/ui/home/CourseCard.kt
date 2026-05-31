@@ -34,13 +34,13 @@ fun CourseCard(
     onClick: () -> Unit
 ) {
     val status = when {
-        course.progress >= 80 -> "Almost Done"
-        course.progress >= 50 -> "In Progress"
+        progress >= 80 -> "Almost Done"
+        progress >= 50 -> "In Progress"
         else -> "Started"
     }
     val statusColor = when {
-        course.progress >= 80 -> Color(0xFF4CAF50)
-        course.progress >= 50 -> Color(0xFF2196F3)
+        progress >= 80 -> Color(0xFF4CAF50)
+        progress >= 50 -> Color(0xFF2196F3)
         else -> Color(0xFFFFA001)
     }
 

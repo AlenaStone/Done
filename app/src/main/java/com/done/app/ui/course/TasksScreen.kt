@@ -4,7 +4,6 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,27 +18,22 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.done.app.data.model.Exam
-import com.done.app.data.model.Task
-import com.done.app.data.repository.AppRepository
-import com.done.app.data.repository.AppRepository.courses
+import com.done.app.ui.common.EmptyState
+import com.done.app.viewmodel.TaskViewModel
 import java.time.LocalDate
 
 
@@ -47,13 +41,10 @@ import java.time.LocalDate
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun TasksScreen(
-    courseName: String
+    viewModel: TaskViewModel
 ) {
     var newTaskName by remember {
         mutableStateOf("")
-    }
-    var nextId by remember {
-        mutableIntStateOf(4)
     }
     var showAddTaskDialog by remember {
         mutableStateOf(false)
@@ -70,15 +61,8 @@ fun TasksScreen(
     }
 
 
-    val tasks = AppRepository.tasks
+    val tasks by viewModel.tasks.collectAsState()
 
-    val course =  courses.find {
-        it.name == courseName
-    }  ?: return
-    val courseTasks =
-        tasks.filter {
-            it.courseId == course.id
-        }
     Scaffold(
         topBar = {
             Column(
@@ -86,7 +70,7 @@ fun TasksScreen(
             ) {
                 TopAppBar(
                     title = {
-                        Text(courseName)
+                        Text("Tasks")
                     }
                 )
 
@@ -142,21 +126,17 @@ fun TasksScreen(
                 },
                 confirmButton = {
                     TextButton(
-                        enabled = newTaskNameTrimmed.isNotEmpty(),
+                        enabled = newTaskNameTrimmed.isNotEmpty() && deadlineDate != null,
                         onClick = {
                             if (newTaskNameTrimmed.isNotEmpty()
                                 && deadlineDate != null) {
-                                tasks.add(
-                                    Task(
-                                        id = nextId,
-                                        courseId = course?.id ?: 0,
-                                        name = newTaskNameTrimmed,
-                                        deadline = deadlineDate
-                                    )
+                                viewModel.addTask(
+                                    taskName = newTaskNameTrimmed,
+                                    deadline = deadlineDate
                                 )
 
-                                nextId++
                                 newTaskName = ""
+                                newDeadline = ""
                                 showAddTaskDialog = false
                             }
                         }
@@ -182,16 +162,9 @@ fun TasksScreen(
                 .padding(paddingValues)
         ) {
             if (tasks.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "No tasks yet",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color(0xFF6D6A7A)
-                    )
-                }
+                EmptyState(
+                    text = "No tasks yet. Tap + to add one."
+                )
             } else {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(1),
@@ -199,16 +172,18 @@ fun TasksScreen(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    items(courseTasks) { task ->
+                    items(tasks) { task ->
                         TaskCard(
                             task = task,
                             onDeleteClick = {
-                                tasks.remove(task)
+                                viewModel.deleteTask(task)
                             },
                             onCheckedChange = { isChecked ->
-                                val index = tasks.indexOf(task)
-                                tasks[index] = task.copy(
-                                    isDone = isChecked
+
+                                viewModel.updateTask(
+                                    task.copy(
+                                        isDone = isChecked
+                                    )
                                 )
                             }
                         )

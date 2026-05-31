@@ -8,12 +8,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
@@ -23,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.done.app.data.model.Assignment
 import java.time.LocalDate
@@ -31,7 +34,7 @@ import java.time.temporal.ChronoUnit
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun AssignmentCard(
+fun AssignmentsCard(
     assignment: Assignment,
     onDeleteClick: () -> Unit,
     onCheckedChange: (Boolean) -> Unit,
@@ -81,7 +84,8 @@ fun AssignmentCard(
             ) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = null
+                    contentDescription = "Delete assignment",
+                    tint = Color(0xFFB94040)
                 )
             }
         }
@@ -89,15 +93,19 @@ fun AssignmentCard(
         Card(
             modifier = Modifier
                 .padding(8.dp)
-                .height(60.dp),
-
+                .fillMaxWidth()
+                .height(72.dp),
+            shape = RoundedCornerShape(8.dp),
+            elevation = CardDefaults.cardElevation(
+                defaultElevation = 6.dp
+            ),
             colors = CardDefaults.cardColors(
                 containerColor = cardColor
             )
         ) {
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .fillMaxSize()
                     .padding(12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
@@ -109,12 +117,16 @@ fun AssignmentCard(
                 Text(
                     text = assignment.title,
                     modifier = Modifier.weight(1f),
-
-                    )
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
 
                 Text(
                     text = assignment.date.toString(),
-                    modifier = Modifier.padding(horizontal = 8.dp)
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(start = 8.dp),
+                    maxLines = 1
                 )
 
                 TextButton(
@@ -126,11 +138,10 @@ fun AssignmentCard(
                         if (assignment.note == null)
                             "Add Grade"
                         else
-                            "Grade: ${assignment.note}"
+                            "Grade: %.2f".format(assignment.note)
                     )
+                }
             }
         }
     }
 }
-}
-

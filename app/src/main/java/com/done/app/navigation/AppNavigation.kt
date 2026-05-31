@@ -3,19 +3,35 @@ package com.done.app.navigation
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.done.app.data.repository.AssignmentRepository
+import com.done.app.data.repository.ExamRepository
+import com.done.app.data.repository.TaskRepository
 import com.done.app.ui.course.AssignmentsScreen
 import com.done.app.ui.course.CourseScreen
 import com.done.app.ui.course.ExamScreen
 import com.done.app.ui.course.TasksScreen
 import com.done.app.ui.home.HomeScreen
 import com.done.app.ui.statistics.StatisticsScreen
+import com.done.app.viewmodel.AssignmentViewModel
+import com.done.app.viewmodel.AssignmentViewModelFactory
+import com.done.app.viewmodel.CourseViewModel
+import com.done.app.viewmodel.CourseViewModelFactory
+import com.done.app.viewmodel.ExamViewModel
+import com.done.app.viewmodel.ExamViewModelFactory
+import com.done.app.viewmodel.TaskViewModel
+import com.done.app.viewmodel.TaskViewModelFactory
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun AppNavigation() {
+fun AppNavigation(    courseFactory: CourseViewModelFactory,
+                      taskRepository: TaskRepository,
+                      examRepository : ExamRepository,
+                      assignmentRepository: AssignmentRepository
+) {
 
     val navController = rememberNavController()
 
@@ -25,55 +41,98 @@ fun AppNavigation() {
     ) {
 
         composable("home") {
-            HomeScreen(navController)
+
+            val courseViewModel: CourseViewModel =
+                viewModel(
+                    factory = courseFactory
+                )
+
+            HomeScreen(
+                navController = navController,
+                viewModel = courseViewModel
+            )
         }
 
-        composable("course/{courseName}") { backStackEntry ->
+        composable("course/{courseId}") { backStackEntry ->
 
-            val courseName =
+            val courseId =
                 backStackEntry.arguments
-                    ?.getString("courseName")
-                    ?: "Unknown Course"
+                    ?.getString("courseId")
+                    ?.toInt()
+                    ?: 0
+
+            val courseViewModel: CourseViewModel =
+                viewModel(
+                    factory = courseFactory
+                )
 
             CourseScreen(
-                courseName = courseName,
-                navController = navController
+                courseId = courseId,
+                navController = navController,
+                viewModel = courseViewModel
             )
         }
 
-        composable("tasks/{courseName}") { backStackEntry ->
+        composable("tasks/{courseId}") { backStackEntry ->
 
-            val courseName =
+            val courseId =
                 backStackEntry.arguments
-                    ?.getString("courseName")
-                    ?: "Unknown Course"
-
+                    ?.getString("courseId")
+                    ?.toInt()
+                    ?: 0
+            val taskFactory =
+                TaskViewModelFactory(
+                    repository = taskRepository,
+                    courseId = courseId
+                )
+            val taskViewModel: TaskViewModel =
+                viewModel(
+                    factory = taskFactory
+                )
             TasksScreen(
-                courseName = courseName
+                viewModel = taskViewModel
             )
         }
 
-        composable("assignments/{courseName}") { backStackEntry ->
+        composable("assignments/{courseId}") { backStackEntry ->
 
-            val courseName =
+            val courseId =
                 backStackEntry.arguments
-                    ?.getString("courseName")
-                    ?: "Unknown Course"
-
+                    ?.getString("courseId")
+                    ?.toInt()
+                    ?: 0
+            val assignmentFactory =
+                AssignmentViewModelFactory(
+                    repository = assignmentRepository,
+                    courseId = courseId
+                )
+            val assignmentViewModel: AssignmentViewModel =
+                viewModel(
+                    factory = assignmentFactory
+                )
             AssignmentsScreen(
-                courseName = courseName
+                viewModel = assignmentViewModel
             )
         }
 
-        composable("exams/{courseName}") { backStackEntry ->
+        composable("exams/{courseId}") { backStackEntry ->
 
-            val courseName =
+            val courseId =
                 backStackEntry.arguments
-                    ?.getString("courseName")
-                    ?: "Unknown Course"
-
+                    ?.getString("courseId")
+                    ?.toInt()
+                    ?: 0
+            val examFactory =
+                ExamViewModelFactory(
+                    repository = examRepository,
+                    courseId = courseId
+                )
+            val examViewModel: ExamViewModel =
+                viewModel(
+                    factory = examFactory
+                )
             ExamScreen(
-                courseName = courseName
+                viewModel = examViewModel
             )
         }
 
@@ -82,3 +141,4 @@ fun AppNavigation() {
         }
     }
 }
+
