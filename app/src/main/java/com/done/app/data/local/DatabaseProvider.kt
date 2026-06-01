@@ -19,7 +19,7 @@ object DatabaseProvider {
                     DoneDatabase::class.java,
                     "done_database"
                 )
-                    .fallbackToDestructiveMigration(dropAllTables = true)
+                    .addMigrations(MIGRATION_3_4, MIGRATION_4_5)
                     .build()
 
             INSTANCE = instance

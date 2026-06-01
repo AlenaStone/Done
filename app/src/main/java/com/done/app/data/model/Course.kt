@@ -9,5 +9,9 @@ data class Course(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
 
-    val name: String
+    val name: String,
+
+    val totalClasses: Int = 0,
+
+    val missedClasses: Int = 0
 )

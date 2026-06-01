@@ -1,7 +1,5 @@
 package com.done.app.ui.course
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,16 +10,16 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -30,17 +28,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import com.done.app.data.model.Task
+import com.done.app.ui.common.AddDatedItemDialog
 import com.done.app.ui.common.EmptyState
 import com.done.app.viewmodel.TaskViewModel
 import java.time.LocalDate
 
 
 @OptIn(ExperimentalMaterial3Api::class)
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun TasksScreen(
+    navController: NavController,
     viewModel: TaskViewModel
 ) {
     var newTaskName by remember {
@@ -49,26 +49,41 @@ fun TasksScreen(
     var showAddTaskDialog by remember {
         mutableStateOf(false)
     }
-    var newDeadline by remember {
+    var selectedDeadline by remember {
+        mutableStateOf<LocalDate?>(null)
+    }
+    var editingTask by remember {
+        mutableStateOf<Task?>(null)
+    }
+    var editTaskName by remember {
         mutableStateOf("")
     }
-    val newTaskNameTrimmed = newTaskName.trim()
-
-    val deadlineDate = try {
-        LocalDate.parse(newDeadline)
-    } catch (e: Exception) {
-        null
+    var editTaskDeadline by remember {
+        mutableStateOf<LocalDate?>(null)
     }
-
+    val newTaskNameTrimmed = newTaskName.trim()
+    val editTaskNameTrimmed = editTaskName.trim()
 
     val tasks by viewModel.tasks.collectAsState()
 
     Scaffold(
         topBar = {
             Column(
-                modifier = Modifier.background(Color(0xFFEDEAFB))
+                modifier = Modifier.background(MaterialTheme.colorScheme.surface)
             ) {
                 TopAppBar(
+                    navigationIcon = {
+                        IconButton(
+                            onClick = {
+                                navController.popBackStack()
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back"
+                            )
+                        }
+                    },
                     title = {
                         Text("Tasks")
                     }
@@ -76,7 +91,7 @@ fun TasksScreen(
 
                 HorizontalDivider(
                     thickness = 1.dp,
-                    color = Color(0xFFD5D0F0)
+                    color = MaterialTheme.colorScheme.surfaceVariant
                 )
             }
         },
@@ -94,71 +109,76 @@ fun TasksScreen(
         }
     ) { paddingValues ->
         if (showAddTaskDialog) {
-            AlertDialog(
-                onDismissRequest = {
+            AddDatedItemDialog(
+                title = "Add Task",
+                name = newTaskName,
+                nameLabel = "Task name",
+                selectedDate = selectedDeadline,
+                datePlaceholder = "Select deadline",
+                canSave = newTaskNameTrimmed.isNotEmpty() && selectedDeadline != null,
+                onNameChange = {
+                    newTaskName = it
+                },
+                onDateSelected = {
+                    selectedDeadline = it
+                },
+                onConfirm = {
+                    selectedDeadline?.let { deadline ->
+                        viewModel.addTask(
+                            taskName = newTaskNameTrimmed,
+                            deadline = deadline
+                        )
+
+                        newTaskName = ""
+                        selectedDeadline = null
+                        showAddTaskDialog = false
+                    }
+                },
+                onDismiss = {
                     showAddTaskDialog = false
+                }
+            )
+        }
+        editingTask?.let { task ->
+            AddDatedItemDialog(
+                title = "Edit Task",
+                name = editTaskName,
+                nameLabel = "Task name",
+                selectedDate = editTaskDeadline,
+                datePlaceholder = "Select deadline",
+                canSave = editTaskNameTrimmed.isNotEmpty() && editTaskDeadline != null,
+                confirmText = "Save",
+                onNameChange = {
+                    editTaskName = it
                 },
-                title = {
-                    Text("Add Task")
+                onDateSelected = {
+                    editTaskDeadline = it
                 },
-                text = {
-                    Column {
-                        OutlinedTextField(
-                            value = newTaskName,
-                            onValueChange = {
-                                newTaskName = it
-                            },
-                            label = {
-                                Text("Task Name")
-                            }
+                onConfirm = {
+                    editTaskDeadline?.let { deadline ->
+                        viewModel.updateTask(
+                            task.copy(
+                                name = editTaskNameTrimmed,
+                                deadline = deadline
+                            )
                         )
 
-                        OutlinedTextField(
-                            value = newDeadline,
-                            onValueChange = {
-                                newDeadline = it
-                            },
-                            label = {
-                                Text("Deadline (YYYY-MM-DD)")
-                            }
-                        )
+                        editingTask = null
+                        editTaskName = ""
+                        editTaskDeadline = null
                     }
                 },
-                confirmButton = {
-                    TextButton(
-                        enabled = newTaskNameTrimmed.isNotEmpty() && deadlineDate != null,
-                        onClick = {
-                            if (newTaskNameTrimmed.isNotEmpty()
-                                && deadlineDate != null) {
-                                viewModel.addTask(
-                                    taskName = newTaskNameTrimmed,
-                                    deadline = deadlineDate
-                                )
-
-                                newTaskName = ""
-                                newDeadline = ""
-                                showAddTaskDialog = false
-                            }
-                        }
-                    ) {
-                        Text("Add")
-                    }
-                },
-                dismissButton = {
-                    TextButton(
-                        onClick = {
-                            showAddTaskDialog = false
-                        }
-                    ) {
-                        Text("Cancel")
-                    }
+                onDismiss = {
+                    editingTask = null
+                    editTaskName = ""
+                    editTaskDeadline = null
                 }
             )
         }
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF7F7FC))
+                .background(MaterialTheme.colorScheme.background)
                 .padding(paddingValues)
         ) {
             if (tasks.isEmpty()) {
@@ -166,17 +186,31 @@ fun TasksScreen(
                     text = "No tasks yet. Tap + to add one."
                 )
             } else {
+                val sortedTasks =
+                    tasks.sortedWith(
+                        compareBy<Task> { it.isDone }
+                            .thenBy { it.deadline }
+                    )
+
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(1),
                     contentPadding = PaddingValues(8.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    items(tasks) { task ->
+                    items(
+                        items = sortedTasks,
+                        key = { task -> task.id }
+                    ) { task ->
                         TaskCard(
                             task = task,
                             onDeleteClick = {
                                 viewModel.deleteTask(task)
+                            },
+                            onEditClick = {
+                                editingTask = task
+                                editTaskName = task.name
+                                editTaskDeadline = task.deadline
                             },
                             onCheckedChange = { isChecked ->
 

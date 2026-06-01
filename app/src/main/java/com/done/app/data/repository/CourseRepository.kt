@@ -23,4 +23,10 @@ class CourseRepository(
     ) {
         courseDao.deleteCourse(course)
     }
+
+    suspend fun updateCourse(
+        course: Course
+    ) {
+        courseDao.updateCourse(course)
+    }
 }

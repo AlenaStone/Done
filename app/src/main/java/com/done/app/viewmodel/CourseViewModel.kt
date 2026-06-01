@@ -70,4 +70,12 @@ class CourseViewModel(
             repository.deleteCourse(course)
         }
     }
+
+    fun updateCourse(
+        course: Course
+    ) {
+        viewModelScope.launch {
+            repository.updateCourse(course)
+        }
+    }
 }

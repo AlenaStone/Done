@@ -1,6 +1,5 @@
 package com.done.app.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -9,35 +8,43 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = Blue80,
+    secondary = Teal80,
+    tertiary = Coral80,
+    background = DoneText,
+    surface = Color(0xFF2C3140),
+    surfaceVariant = Color(0xFF424A5F),
+    onPrimary = Color(0xFF10213F),
+    onSecondary = Color(0xFF063A35),
+    onTertiary = Color(0xFF4A1B14),
+    onBackground = Color(0xFFF5F7FA),
+    onSurface = Color(0xFFF5F7FA),
+    onSurfaceVariant = Color(0xFFC9CED8)
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    primary = Blue40,
+    secondary = Teal40,
+    tertiary = Coral40,
+    background = DoneBackground,
+    surface = DoneSurface,
+    surfaceVariant = DoneSurfaceVariant,
+    onPrimary = DoneSurface,
+    onSecondary = DoneSurface,
+    onTertiary = DoneSurface,
+    onBackground = DoneText,
+    onSurface = DoneText,
+    onSurfaceVariant = DoneMutedText
 )
 
 @Composable
 fun DoneTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {

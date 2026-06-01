@@ -1,7 +1,5 @@
 package com.done.app.ui.course
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,16 +10,16 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -30,17 +28,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.done.app.data.model.Exam
+import com.done.app.ui.common.AddDatedItemDialog
+import com.done.app.ui.common.AddGradeDialog
 import com.done.app.ui.common.EmptyState
 import com.done.app.viewmodel.ExamViewModel
 import java.time.LocalDate
 
-@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExamScreen(
+    navController: NavController,
     viewModel: ExamViewModel
 ) {
     var newExamName by remember {
@@ -49,16 +49,20 @@ fun ExamScreen(
     var showAddExamDialog by remember {
         mutableStateOf(false)
     }
-    var newDeadline by remember {
+    var selectedDate by remember {
+        mutableStateOf<LocalDate?>(null)
+    }
+    var editingExam by remember {
+        mutableStateOf<Exam?>(null)
+    }
+    var editExamName by remember {
         mutableStateOf("")
     }
-    val newExamNameTrimmed = newExamName.trim()
-
-    val deadlineDate = try {
-        LocalDate.parse(newDeadline)
-    } catch (e: Exception) {
-        null
+    var editExamDate by remember {
+        mutableStateOf<LocalDate?>(null)
     }
+    val newExamNameTrimmed = newExamName.trim()
+    val editExamNameTrimmed = editExamName.trim()
 
     var showGradeDialog by remember {
         mutableStateOf(false)
@@ -71,15 +75,29 @@ fun ExamScreen(
     var gradeText by remember {
         mutableStateOf("")
     }
+    val grade = gradeText.toDoubleOrNull()
+    val isGradeValid = grade != null
 
     val exams by viewModel.exams.collectAsState()
 
     Scaffold(
         topBar = {
             Column(
-                modifier = Modifier.background(Color(0xFFEDEAFB))
+                modifier = Modifier.background(MaterialTheme.colorScheme.surface)
             ) {
                 TopAppBar(
+                    navigationIcon = {
+                        IconButton(
+                            onClick = {
+                                navController.popBackStack()
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back"
+                            )
+                        }
+                    },
                     title = {
                         Text("Exams")
                     }
@@ -87,7 +105,7 @@ fun ExamScreen(
 
                 HorizontalDivider(
                     thickness = 1.dp,
-                    color = Color(0xFFD5D0F0)
+                    color = MaterialTheme.colorScheme.surfaceVariant
                 )
             }
         },
@@ -105,138 +123,105 @@ fun ExamScreen(
         }
     ) { paddingValues ->
         if (showAddExamDialog) {
-            AlertDialog(
-                onDismissRequest = {
+            AddDatedItemDialog(
+                title = "Add Exam",
+                name = newExamName,
+                nameLabel = "Exam name",
+                selectedDate = selectedDate,
+                datePlaceholder = "Select exam date",
+                canSave = newExamNameTrimmed.isNotEmpty() && selectedDate != null,
+                onNameChange = {
+                    newExamName = it
+                },
+                onDateSelected = {
+                    selectedDate = it
+                },
+                onConfirm = {
+                    selectedDate?.let { date ->
+                        viewModel.addExam(
+                            examName = newExamNameTrimmed,
+                            date = date
+                        )
+
+                        newExamName = ""
+                        selectedDate = null
+                        showAddExamDialog = false
+                    }
+                },
+                onDismiss = {
                     showAddExamDialog = false
+                }
+            )
+        }
+        editingExam?.let { exam ->
+            AddDatedItemDialog(
+                title = "Edit Exam",
+                name = editExamName,
+                nameLabel = "Exam name",
+                selectedDate = editExamDate,
+                datePlaceholder = "Select exam date",
+                canSave = editExamNameTrimmed.isNotEmpty() && editExamDate != null,
+                confirmText = "Save",
+                onNameChange = {
+                    editExamName = it
                 },
-                title = {
-                    Text("Add Exam")
+                onDateSelected = {
+                    editExamDate = it
                 },
-                text = {
-                    Column {
-                        OutlinedTextField(
-                            value = newExamName,
-                            onValueChange = {
-                                newExamName = it
-                            },
-                            label = {
-                                Text("Exam Name")
-                            }
+                onConfirm = {
+                    editExamDate?.let { date ->
+                        viewModel.updateExam(
+                            exam.copy(
+                                title = editExamNameTrimmed,
+                                date = date
+                            )
                         )
 
-                        OutlinedTextField(
-                            value = newDeadline,
-                            onValueChange = {
-                                newDeadline = it
-                            },
-                            label = {
-                                Text("Date (YYYY-MM-DD)")
-                            }
-                        )
+                        editingExam = null
+                        editExamName = ""
+                        editExamDate = null
                     }
                 },
-                confirmButton = {
-                    TextButton(
-                        enabled = newExamNameTrimmed.isNotEmpty() && deadlineDate != null,
-                        onClick = {
-                            if (newExamNameTrimmed.isNotEmpty()
-                                && deadlineDate != null
-                            ) {
-                                viewModel.addExam(
-                                    examName = newExamNameTrimmed,
-                                    date = deadlineDate
-                                )
-
-                                newExamName = ""
-                                newDeadline = ""
-                                showAddExamDialog = false
-                            }
-                        }
-                    ) {
-                        Text("Add")
-                    }
-                },
-                dismissButton = {
-                    TextButton(
-                        onClick = {
-                            showAddExamDialog = false
-                        }
-                    ) {
-                        Text("Cancel")
-                    }
+                onDismiss = {
+                    editingExam = null
+                    editExamName = ""
+                    editExamDate = null
                 }
             )
         }
         if (showGradeDialog) {
+            AddGradeDialog(
+                gradeText = gradeText,
+                isGradeValid = selectedExam != null && isGradeValid,
+                onGradeChange = {
+                    gradeText = it
+                },
+                onConfirm = {
+                    if (
+                        grade != null &&
+                        selectedExam != null
+                    ) {
+                        selectedExam?.let { exam ->
+                            viewModel.updateExam(
+                                exam.copy(
+                                    note = grade
+                                )
+                            )
+                        }
 
-            AlertDialog(
-                onDismissRequest = {
+                        showGradeDialog = false
+                        gradeText = ""
+                    }
+                },
+                onDismiss = {
                     showGradeDialog = false
-                },
-
-                title = {
-                    Text("Add Grade")
-                },
-
-                text = {
-
-                    OutlinedTextField(
-                        value = gradeText,
-                        onValueChange = {
-                            gradeText = it
-                        },
-                        label = {
-                            Text("Grade")
-                        }
-                    )
-                },
-
-                confirmButton = {
-
-                    TextButton(
-                        onClick = {
-
-                            val grade =
-                                gradeText.toDoubleOrNull()
-
-                            if (
-                                grade != null &&
-                                selectedExam != null
-                            ) {
-
-                                selectedExam?.let { exam ->
-                                    viewModel.updateExam(
-                                        exam.copy(
-                                            note = grade
-                                        )
-                                    )
-                                }
-
-                                showGradeDialog = false
-                                gradeText = ""
-                            }
-                        }
-                    ) {
-                        Text("Save")
-                    }
-                },
-
-                dismissButton = {
-
-                    TextButton(
-                        onClick = {
-                            showGradeDialog = false
-                        }
-                    ) {
-                        Text("Cancel")
-                    }
                 }
             )
         }
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF7F7FC))
+                .background(MaterialTheme.colorScheme.background)
                 .padding(paddingValues)
         ) {
             if (exams.isEmpty()) {
@@ -244,13 +229,22 @@ fun ExamScreen(
                     text = "No exams yet. Tap + to add one."
                 )
             } else {
+                val sortedExams =
+                    exams.sortedWith(
+                        compareBy<Exam> { it.isDone }
+                            .thenBy { it.date }
+                    )
+
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(1),
                     contentPadding = PaddingValues(8.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    items(exams) { exam ->
+                    items(
+                        items = sortedExams,
+                        key = { exam -> exam.id }
+                    ) { exam ->
                         ExamsCard(
                             exam = exam,
                             onAddGradeClick = {
@@ -260,6 +254,11 @@ fun ExamScreen(
                             },
                             onDeleteClick = {
                                 viewModel.deleteExam(exam)
+                            },
+                            onEditClick = {
+                                editingExam = exam
+                                editExamName = exam.title
+                                editExamDate = exam.date
                             },
                             onCheckedChange =  { isChecked ->
                                 viewModel.updateExam(

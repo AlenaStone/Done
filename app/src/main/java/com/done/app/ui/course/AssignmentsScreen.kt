@@ -1,7 +1,5 @@
 package com.done.app.ui.course
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,16 +10,16 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -30,17 +28,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.done.app.data.model.Assignment
+import com.done.app.ui.common.AddDatedItemDialog
+import com.done.app.ui.common.AddGradeDialog
 import com.done.app.ui.common.EmptyState
 import com.done.app.viewmodel.AssignmentViewModel
 import java.time.LocalDate
 
-@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AssignmentsScreen(
+    navController: NavController,
     viewModel: AssignmentViewModel
 ) {
     var newAssignmentName by remember {
@@ -50,16 +50,20 @@ fun AssignmentsScreen(
     var showAddAssignDialog by remember {
         mutableStateOf(false)
     }
-    var newDeadline by remember {
+    var selectedDate by remember {
+        mutableStateOf<LocalDate?>(null)
+    }
+    var editingAssignment by remember {
+        mutableStateOf<Assignment?>(null)
+    }
+    var editAssignmentName by remember {
         mutableStateOf("")
     }
-    val newAssignmentNameTrimmed = newAssignmentName.trim()
-
-    val deadlineDate = try {
-        LocalDate.parse(newDeadline)
-    } catch (e: Exception) {
-        null
+    var editAssignmentDate by remember {
+        mutableStateOf<LocalDate?>(null)
     }
+    val newAssignmentNameTrimmed = newAssignmentName.trim()
+    val editAssignmentNameTrimmed = editAssignmentName.trim()
 
     val assignments by viewModel.assignments.collectAsState()
 
@@ -74,13 +78,27 @@ fun AssignmentsScreen(
     var gradeText by remember {
         mutableStateOf("")
     }
+    val grade = gradeText.toDoubleOrNull()
+    val isGradeValid = grade != null
 
     Scaffold(
         topBar = {
             Column(
-                modifier = Modifier.background(Color(0xFFEDEAFB))
+                modifier = Modifier.background(MaterialTheme.colorScheme.surface)
             ) {
                 TopAppBar(
+                    navigationIcon = {
+                        IconButton(
+                            onClick = {
+                                navController.popBackStack()
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back"
+                            )
+                        }
+                    },
                     title = {
                         Text("Assignments")
                     }
@@ -88,7 +106,7 @@ fun AssignmentsScreen(
 
                 HorizontalDivider(
                     thickness = 1.dp,
-                    color = Color(0xFFD5D0F0)
+                    color = MaterialTheme.colorScheme.surfaceVariant
                 )
             }
         },
@@ -106,138 +124,105 @@ fun AssignmentsScreen(
         }
     ) { paddingValues ->
         if (showAddAssignDialog) {
-            AlertDialog(
-                onDismissRequest = {
+            AddDatedItemDialog(
+                title = "Add Assignment",
+                name = newAssignmentName,
+                nameLabel = "Assignment name",
+                selectedDate = selectedDate,
+                datePlaceholder = "Select due date",
+                canSave = newAssignmentNameTrimmed.isNotEmpty() && selectedDate != null,
+                onNameChange = {
+                    newAssignmentName = it
+                },
+                onDateSelected = {
+                    selectedDate = it
+                },
+                onConfirm = {
+                    selectedDate?.let { date ->
+                        viewModel.addAssignment(
+                            assignmentName = newAssignmentNameTrimmed,
+                            date = date
+                        )
+
+                        newAssignmentName = ""
+                        selectedDate = null
+                        showAddAssignDialog = false
+                    }
+                },
+                onDismiss = {
                     showAddAssignDialog = false
+                }
+            )
+        }
+        editingAssignment?.let { assignment ->
+            AddDatedItemDialog(
+                title = "Edit Assignment",
+                name = editAssignmentName,
+                nameLabel = "Assignment name",
+                selectedDate = editAssignmentDate,
+                datePlaceholder = "Select due date",
+                canSave = editAssignmentNameTrimmed.isNotEmpty() && editAssignmentDate != null,
+                confirmText = "Save",
+                onNameChange = {
+                    editAssignmentName = it
                 },
-                title = {
-                    Text("Add Assignment")
+                onDateSelected = {
+                    editAssignmentDate = it
                 },
-                text = {
-                    Column {
-                        OutlinedTextField(
-                            value = newAssignmentName,
-                            onValueChange = {
-                                newAssignmentName = it
-                            },
-                            label = {
-                                Text("Assignment Name")
-                            }
+                onConfirm = {
+                    editAssignmentDate?.let { date ->
+                        viewModel.updateAssignment(
+                            assignment.copy(
+                                title = editAssignmentNameTrimmed,
+                                date = date
+                            )
                         )
 
-                        OutlinedTextField(
-                            value = newDeadline,
-                            onValueChange = {
-                                newDeadline = it
-                            },
-                            label = {
-                                Text("Date (YYYY-MM-DD)")
-                            }
-                        )
+                        editingAssignment = null
+                        editAssignmentName = ""
+                        editAssignmentDate = null
                     }
                 },
-                confirmButton = {
-                    TextButton(
-                        enabled = newAssignmentNameTrimmed.isNotEmpty() && deadlineDate != null,
-                        onClick = {
-                            if (newAssignmentNameTrimmed.isNotEmpty()
-                                && deadlineDate != null
-                            ) {
-                                viewModel.addAssignment(
-                                    assignmentName = newAssignmentNameTrimmed,
-                                    date = deadlineDate
-                                )
-
-                                newAssignmentName = ""
-                                newDeadline = ""
-                                showAddAssignDialog = false
-                            }
-                        }
-                    ) {
-                        Text("Add")
-                    }
-                },
-                dismissButton = {
-                    TextButton(
-                        onClick = {
-                            showAddAssignDialog = false
-                        }
-                    ) {
-                        Text("Cancel")
-                    }
+                onDismiss = {
+                    editingAssignment = null
+                    editAssignmentName = ""
+                    editAssignmentDate = null
                 }
             )
         }
         if (showGradeDialog) {
+            AddGradeDialog(
+                gradeText = gradeText,
+                isGradeValid = selectedAssignment != null && isGradeValid,
+                onGradeChange = {
+                    gradeText = it
+                },
+                onConfirm = {
+                    if (
+                        grade != null &&
+                        selectedAssignment != null
+                    ) {
+                        selectedAssignment?.let { assignment ->
+                            viewModel.updateAssignment(
+                                assignment.copy(
+                                    note = grade
+                                )
+                            )
+                        }
 
-            AlertDialog(
-                onDismissRequest = {
+                        showGradeDialog = false
+                        gradeText = ""
+                    }
+                },
+                onDismiss = {
                     showGradeDialog = false
-                },
-
-                title = {
-                    Text("Add Grade")
-                },
-
-                text = {
-
-                    OutlinedTextField(
-                        value = gradeText,
-                        onValueChange = {
-                            gradeText = it
-                        },
-                        label = {
-                            Text("Grade")
-                        }
-                    )
-                },
-
-                confirmButton = {
-
-                    TextButton(
-                        onClick = {
-
-                            val grade =
-                                gradeText.toDoubleOrNull()
-
-                            if (
-                                grade != null &&
-                                selectedAssignment != null
-                            ) {
-
-                                selectedAssignment?.let { assignment ->
-                                    viewModel.updateAssignment(
-                                        assignment.copy(
-                                            note = grade
-                                        )
-                                    )
-                                }
-
-                                showGradeDialog = false
-                                gradeText = ""
-                            }
-                        }
-                    ) {
-                        Text("Save")
-                    }
-                },
-
-                dismissButton = {
-
-                    TextButton(
-                        onClick = {
-                            showGradeDialog = false
-                        }
-                    ) {
-                        Text("Cancel")
-                    }
                 }
             )
         }
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF7F7FC))
+                .background(MaterialTheme.colorScheme.background)
                 .padding(paddingValues)
         ) {
             if (assignments.isEmpty()) {
@@ -245,13 +230,22 @@ fun AssignmentsScreen(
                     text = "No assignments yet. Tap + to add one."
                 )
             } else {
+                val sortedAssignments =
+                    assignments.sortedWith(
+                        compareBy<Assignment> { it.isDone }
+                            .thenBy { it.date }
+                    )
+
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(1),
                     contentPadding = PaddingValues(8.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    items(assignments) { assignment ->
+                    items(
+                        items = sortedAssignments,
+                        key = { assignment -> assignment.id }
+                    ) { assignment ->
                         AssignmentsCard(
                             assignment = assignment,
                             onAddGradeClick = {
@@ -261,6 +255,11 @@ fun AssignmentsScreen(
                             },
                             onDeleteClick = {
                                 viewModel.deleteAssignment(assignment)
+                            },
+                            onEditClick = {
+                                editingAssignment = assignment
+                                editAssignmentName = assignment.title
+                                editAssignmentDate = assignment.date
                             },
                             onCheckedChange =  { isChecked ->
                                 viewModel.updateAssignment(

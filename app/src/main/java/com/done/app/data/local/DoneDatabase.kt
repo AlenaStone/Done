@@ -17,7 +17,7 @@ import com.done.app.data.model.Task
         Exam::class,
         Assignment::class
     ],
-    version = 3,
+    version = 5,
     exportSchema = false
 )
 abstract class DoneDatabase : RoomDatabase() {

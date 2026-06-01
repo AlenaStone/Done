@@ -1,7 +1,5 @@
 package com.done.app.navigation
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
@@ -10,11 +8,14 @@ import androidx.navigation.compose.rememberNavController
 import com.done.app.data.repository.AssignmentRepository
 import com.done.app.data.repository.ExamRepository
 import com.done.app.data.repository.TaskRepository
+import com.done.app.data.repository.TipsRepository
 import com.done.app.ui.course.AssignmentsScreen
 import com.done.app.ui.course.CourseScreen
 import com.done.app.ui.course.ExamScreen
 import com.done.app.ui.course.TasksScreen
 import com.done.app.ui.home.HomeScreen
+import com.done.app.ui.settings.SettingsScreen
+import com.done.app.ui.settings.ThemeSetting
 import com.done.app.ui.statistics.StatisticsScreen
 import com.done.app.viewmodel.AssignmentViewModel
 import com.done.app.viewmodel.AssignmentViewModelFactory
@@ -24,13 +25,19 @@ import com.done.app.viewmodel.ExamViewModel
 import com.done.app.viewmodel.ExamViewModelFactory
 import com.done.app.viewmodel.TaskViewModel
 import com.done.app.viewmodel.TaskViewModelFactory
+import com.done.app.viewmodel.TipsViewModel
+import com.done.app.viewmodel.TipsViewModelFactory
 
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun AppNavigation(    courseFactory: CourseViewModelFactory,
-                      taskRepository: TaskRepository,
-                      examRepository : ExamRepository,
-                      assignmentRepository: AssignmentRepository
+fun AppNavigation(
+    courseFactory: CourseViewModelFactory,
+    taskRepository: TaskRepository,
+    examRepository: ExamRepository,
+    assignmentRepository: AssignmentRepository,
+    tipsRepository: TipsRepository,
+    themeSetting: ThemeSetting,
+    onThemeChange: (ThemeSetting) -> Unit,
+    onClearData: () -> Unit
 ) {
 
     val navController = rememberNavController()
@@ -46,10 +53,17 @@ fun AppNavigation(    courseFactory: CourseViewModelFactory,
                 viewModel(
                     factory = courseFactory
                 )
+            val tipsViewModel: TipsViewModel =
+                viewModel(
+                    factory = TipsViewModelFactory(
+                        repository = tipsRepository
+                    )
+                )
 
             HomeScreen(
                 navController = navController,
-                viewModel = courseViewModel
+                viewModel = courseViewModel,
+                tipsViewModel = tipsViewModel
             )
         }
 
@@ -90,6 +104,7 @@ fun AppNavigation(    courseFactory: CourseViewModelFactory,
                     factory = taskFactory
                 )
             TasksScreen(
+                navController = navController,
                 viewModel = taskViewModel
             )
         }
@@ -111,6 +126,7 @@ fun AppNavigation(    courseFactory: CourseViewModelFactory,
                     factory = assignmentFactory
                 )
             AssignmentsScreen(
+                navController = navController,
                 viewModel = assignmentViewModel
             )
         }
@@ -132,12 +148,22 @@ fun AppNavigation(    courseFactory: CourseViewModelFactory,
                     factory = examFactory
                 )
             ExamScreen(
+                navController = navController,
                 viewModel = examViewModel
             )
         }
 
         composable("statistics") {
             StatisticsScreen()
+        }
+
+        composable("settings") {
+            SettingsScreen(
+                navController = navController,
+                themeSetting = themeSetting,
+                onThemeChange = onThemeChange,
+                onClearData = onClearData
+            )
         }
     }
 }

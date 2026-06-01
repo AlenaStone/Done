@@ -39,9 +39,9 @@ fun CourseCard(
         else -> "Started"
     }
     val statusColor = when {
-        progress >= 80 -> Color(0xFF4CAF50)
-        progress >= 50 -> Color(0xFF2196F3)
-        else -> Color(0xFFFFA001)
+        progress >= 80 -> Color(0xFF0F766E)
+        progress >= 50 -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.tertiary
     }
 
     Card(
@@ -50,8 +50,11 @@ fun CourseCard(
             .padding(8.dp)
             .height(140.dp),
         shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 6.dp
+            defaultElevation = 3.dp
         )
     ) {
         Column(
@@ -79,6 +82,7 @@ fun CourseCard(
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Delete course",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(14.dp)
                     )
                 }
@@ -88,10 +92,13 @@ fun CourseCard(
                     if (averageGrade == null)
                         "Grade: -"
                     else
-                        "Grade: %.2f".format(averageGrade)
+                        "Grade: %.2f".format(averageGrade),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium
             )
             Text(
-                text = "$status - ${progress}%"
+                text = "$status - ${progress}%",
+                style = MaterialTheme.typography.bodyMedium
             )
 
             LinearProgressIndicator(
@@ -101,9 +108,9 @@ fun CourseCard(
                 modifier = Modifier
                     .padding(top = 8.dp)
                     .fillMaxWidth()
-                    .height(12.dp),
+                    .height(8.dp),
                 color = statusColor,
-                trackColor = Color(0xFFE3E5F1),
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
                 gapSize = 0.dp,
                 drawStopIndicator = {}
             )

@@ -1,7 +1,5 @@
 package com.done.app.viewmodel
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.done.app.data.model.Exam
@@ -24,7 +22,6 @@ class ExamViewModel(
                 initialValue = emptyList()
             )
 
-    @RequiresApi(Build.VERSION_CODES.O)
     fun addExam(
         examName: String,
         date: LocalDate
